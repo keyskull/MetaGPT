@@ -37,6 +37,7 @@ TOKEN_MAX = {
     "gpt-4-32k-0314": 32768,
     "gpt-4-0613": 8192,
     "text-embedding-ada-002": 8192,
+    "chatglm2-6b-32k-int4": 32768
 }
 
 

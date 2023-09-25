@@ -88,6 +88,14 @@ class Config(metaclass=Singleton):
 
         self.prompt_format = self._get("PROMPT_FORMAT", "markdown")
 
+        self.ssh_hostname = self._get("SSH_HOSTNAME", "")
+        self.ssh_username = self._get("SSH_USERNAME", "")
+        self.ssh_port = self._get("SSH_PORT", "")
+        self.ssh_password = self._get("SSH_PASSWORD", "")
+        self.ssh_key_filename = self._get("SSH_KEY_FILENAME", "")
+
+
+
     def _init_with_config_files_and_env(self, configs: dict, yaml_file):
         """Load from config/key.yaml, config/config.yaml, and env in decreasing order of priority"""
         configs.update(os.environ)
