@@ -8,7 +8,7 @@
 import os
 import subprocess
 import traceback
-from typing import Tuple
+from typing import IO, Tuple
 
 from metagpt.actions.action import Action
 from metagpt.logs import logger
@@ -56,12 +56,17 @@ standard errors: {errs};
 """
 
 
-class RunCode(Action):
+
+
+class RunCommand(Action):
+
+    processor = None
+
     def __init__(self, name="RunCode", context=None, llm=None):
         super().__init__(name, context, llm)
 
     @classmethod
-    async def run_text(cls, code) -> Tuple[str, str]:
+    async def run_command(cls, code) -> Tuple[str, str]:
         try:
             # We will document_store the result in this dictionary
             namespace = {}
@@ -71,8 +76,14 @@ class RunCode(Action):
             # If there is an error in the code, return the error message
             return "", traceback.format_exc()
 
+
+            
+
     @classmethod
-    async def run_script(cls, working_directory, additional_python_paths=[], command=[]) -> Tuple[str, str]:
+    async def run_interactive_console(cls, working_directory, additional_python_paths=[], command="") -> str:
+        import pexpect.replwrap
+        import io
+        import sys
         working_directory = str(working_directory)
         additional_python_paths = [str(path) for path in additional_python_paths]
 
@@ -85,18 +96,14 @@ class RunCode(Action):
         env["PYTHONPATH"] = additional_python_paths + ":" + env.get("PYTHONPATH", "")
 
         # Start the subprocess
-        process = subprocess.Popen(
-            command, cwd=working_directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
-        )
 
-        try:
-            # Wait for the process to complete, with a timeout
-            stdout, stderr = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            logger.info("The command did not complete within the given timeout.")
-            process.kill()  # Kill the process if it times out
-            stdout, stderr = process.communicate()
-        return stdout.decode("utf-8"), stderr.decode("utf-8")
+        if cls.processor is None:
+            child = pexpect.replwrap.bash()
+            child.logfile = io.BytesIO()
+            cls.processor = child
+            
+        
+        return cls.processor.run_command(command)
 
     async def run(
         self, code, mode="script", code_file_name="", test_code="", test_file_name="", command=[], **kwargs
@@ -106,6 +113,8 @@ class RunCode(Action):
             outs, errs = await self.run_script(command=command, **kwargs)
         elif mode == "text":
             outs, errs = await self.run_text(code=code)
+        elif mode == "console":
+            outs, errs = await self.run_console(**kwargs)
 
         logger.info(f"{outs=}")
         logger.info(f"{errs=}")
